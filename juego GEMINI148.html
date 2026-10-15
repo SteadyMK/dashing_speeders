@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashing Speeders - Neon Night Edition</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body { text-align: center; background: #000; color: white; font-family: 'Arial Black', sans-serif; margin: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        #game-container { position: relative; width: 950px; height: 600px; }
+        canvas { background: #050505; border: 4px solid #444; image-rendering: pixelated; box-shadow: 0 0 70px rgba(255, 0, 0, 0.2); }
+        
+        .ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); z-index: 20; }
+        
+        #menuInicio { display: flex; background: linear-gradient(to bottom, #000, #1a0505); }
+        .btn-principal { background: #e74c3c; color: white; border: none; padding: 15px 40px; font-size: 24px; font-weight: bold; cursor: pointer; border-radius: 10px; box-shadow: 0 5px 0 #952b1f; transition: 0.2s; }
+        .btn-principal:active { transform: translateY(3px); box-shadow: 0 2px 0 #952b1f; }
+        
+        #btnGarage { width: 100px; height: 100px; margin-top: 20px; cursor: pointer; border: 3px solid white; border-radius: 15px; background: #222 url('pixil-frame-0.png') no-repeat center; background-size: 50px 50px; transition: 0.3s; }
+        #btnGarage:hover { transform: scale(1.1); background-color: #333; }
+
+        /* Estilo Botón Tienda */
+        #btnTiendaMenu { width: 100px; height: 100px; margin-top: 20px; cursor: pointer; border: 3px solid #f1c40f; border-radius: 15px; background: #222; display: flex; align-items: center; justify-content: center; font-size: 50px; transition: 0.3s; }
+        #btnTiendaMenu:hover { transform: scale(1.1); background: #333; }
+
+        /* Estilo Botón Misiones */
+        #btnMisionesMenu { width: 100px; height: 100px; margin-top: 20px; cursor: pointer; border: 3px solid #2ecc71; border-radius: 15px; background: #222; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        #btnMisionesMenu:hover { transform: scale(1.1); background: #333; }
+
+        #btnPaseMenu {
+            position: absolute;
+            left: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 180px;
+            height: 180px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+            z-index: 25;
+        }
+        #btnPaseMenu:hover { transform: translateY(-50%) scale(1.05); filter: brightness(1.2); }
+        #btnPaseMenu img { width: 100%; height: auto; }
+        
+        #tagNivelInicio { 
+            position: absolute; 
+            right: -10px; 
+            bottom: 20px; 
+            background: #f1c40f; 
+            color: #000; 
+            padding: 5px 10px; 
+            border-radius: 5px; 
+            font-size: 24px; 
+            border: 3px solid #000;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        #toggleAutoContainer {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255,255,255,0.1);
+            padding: 10px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; pointer-events: none; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2ecc71; }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        /* Estilos Tienda y Pase */
+        #pantallaPase, #pantallaTienda { background: linear-gradient(135deg, #1a1a1a 0%, #000 100%); padding: 30px; box-sizing: border-box; }
+        #contenedorNiveles, #contenedorTienda { 
+            width: 800px; 
+            height: 350px; 
+            overflow-y: scroll; 
+            margin: 20px 0; 
+            padding-right: 15px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        #contenedorNiveles { grid-template-columns: repeat(1, 1fr); }
+        #contenedorNiveles::-webkit-scrollbar, #contenedorTienda::-webkit-scrollbar { width: 8px; }
+        #contenedorNiveles::-webkit-scrollbar-thumb, #contenedorTienda::-webkit-scrollbar-thumb { background: #e74c3c; border-radius: 10px; }
+
+        .item-tienda {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid #444;
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: 0.3s;
+        }
+        .item-tienda:hover { border-color: #f1c40f; background: rgba(241, 196, 15, 0.1); }
+
+        .fila-nivel {
+            display: flex;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 10px 20px;
+            border: 2px solid transparent;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .fila-nivel.bloqueado { opacity: 0.4; filter: grayscale(0.8); }
+        .fila-nivel.actual { border-color: #2ecc71; background: rgba(46, 204, 113, 0.1); box-shadow: 0 0 15px rgba(46, 204, 113, 0.3); }
+        
+        .num-nivel { font-size: 24px; min-width: 50px; color: #aaa; }
+        .actual .num-nivel { color: #2ecc71; }
+
+        .recompensa-box { flex: 1; display: flex; gap: 20px; justify-content: space-around; }
+        .item-recompensa { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 5px 15px; border-radius: 20px; }
+        .basico { background: #95a5a6; color: #000; border: 2px solid #7f8c8d; }
+        .premium { background: #f1c40f; color: #000; border: 2px solid #d35400; font-weight: bold; }
+
+        #menuGarage { background: #0a0a0a; border: 3px solid #00d4ff; border-radius: 20px; padding: 20px; width: 750px; height: 500px; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; flex-direction: column; }
+        
+        .garage-grid { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
+        .car-option { border: 2px solid #444; padding: 10px; border-radius: 10px; cursor: pointer; background: #222; width: 140px; text-align: center; transition: 0.3s; }
+        .car-option:hover { border-color: #f1c40f; background: rgba(241, 196, 15, 0.1); }
+        
+        .car-option.selected { border-color: #e74c3c; box-shadow: 0 0 15px #e74c3c; }
+        .locked { filter: grayscale(1); opacity: 0.5; }
+
+        #menuCarreteras { display: none; }
+        .road-option { border: 4px solid #e74c3c; padding: 15px; border-radius: 15px; background: #111; cursor: pointer; transition: 0.3s; width: 220px; }
+        .road-option:hover { transform: scale(1.05); background: #222; }
+
+        #globoGameOver { background: white; color: black; padding: 25px; border-radius: 50px; width: 400px; border: 6px solid #000; position: relative; box-shadow: 10px 10px 0 rgba(0,0,0,0.5); }
+        #globoGameOver::after { content: ''; position: absolute; bottom: -30px; left: 50%; border-width: 30px 20px 0; border-style: solid; border-color: #000 transparent transparent transparent; margin-left: -20px; }
+
+        .mission-item { font-size: 13px; margin: 3px 0; color: #ccc; }
+        .mission-done { color: #2ecc71; text-decoration: line-through; }
+        
+        #coinDisplayInicio { font-size: 32px; color: #f1c40f; margin-bottom: 15px; text-shadow: 2px 2px 0 #000; display: flex; align-items: center; gap: 10px; }
+        #listaMisionesFull { text-align: left; width: 600px; background: #111; padding: 20px; border-radius: 10px; overflow-y: auto; max-height: 350px; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="juegoCanvas" width="950" height="600"></canvas>
+
+    <div id="hud" style="position: absolute; top: 20px; left: 25px; right: 25px; display: flex; justify-content: space-between; pointer-events: none; z-index: 5;">
+        <div style="font-size: 26px; color: #e74c3c;">PUNTOS: <span id="valScore">0</span></div>
+        <div style="font-size: 26px; color: #f1c40f; display: flex; align-items: center; gap: 10px;">
+            <img src="DashCoins.png" width="30"> <span id="valCoins">0</span>
+        </div>
+    </div>
+
+    <div id="btnPausa" onclick="togglePausa()" style="position: absolute; top: 60px; right: 25px; display: none; cursor: pointer; z-index: 10; background: rgba(0,0,0,0.7); border: 2px solid white; border-radius: 8px; padding: 5px 15px; font-size: 18px; color: white; font-family: 'Arial Black', sans-serif;">❚❚</div>
+
+    <div id="menuInicio" class="ui-overlay">
+        <div id="btnPaseMenu" onclick="abrirPantallaPase()">
+            <img id="imgBtnPase" src="PaseBásico.png" alt="Pase">
+            <div id="tagNivelInicio">1</div>
+        </div>
+
+        <h1 style="font-size: 80px; color: #e74c3c; font-style: italic; margin: 0;">DASHING SPEEDERS</h1>
+        <div id="coinDisplayInicio">
+            <img src="DashCoins.png" width="40"> DASHCOINS: <span id="valCoinsInicio">0</span>
+        </div>
+        <div id="displayCoche" style="margin: 20px;"><img id="imgMenuShow" src="Marting.png" width="150"></div>
+        <button class="btn-principal" onclick="abrirCarreteras()">JUGAR</button>
+        
+        <div style="display: flex; gap: 20px;">
+            <div id="btnGarage" onclick="abrirGarage()"></div>
+            <div id="btnMisionesMenu" onclick="abrirMisiones()">
+                <img src="Misiones.png" alt="Misiones" style="width: 50px; height: 50px; object-fit: contain;">
+            </div>
+            <div id="btnTiendaMenu" onclick="abrirPantallaTienda()">
+                <img src="Tienda.png" alt="Tienda" style="width: 50px; height: 50px; object-fit: contain;">
+            </div>
+        </div>
+
+        <div id="miniMisiones" style="margin-top: 20px; font-size: 14px; color: #666;"></div>
+    </div>
+
+    <div id="menuMisiones" class="ui-overlay" style="background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);">
+        <h2 style="font-size: 40px; color: #2ecc71; margin-bottom: 20px;">MISIONES</h2>
+        <div id="listaMisionesFull"></div>
+        <button class="btn-principal" style="background: #555; box-shadow: 0 5px 0 #333; font-size: 16px; margin-top: 25px;" onclick="cerrarMisiones()">VOLVER</button>
+    </div>
+
+    <div id="pantallaTienda" class="ui-overlay">
+        <h2 style="font-size: 36px; color: #f1c40f; margin: 0;">TIENDA DE ÉLITE</h2>
+        <div id="contenedorTienda">
+            <div class="item-tienda">
+                <h3 style="color: #fff; margin: 5px;">GOLF ITG</h3>
+                <img src="Golfitg.png" width="120" style="margin: 10px;">
+                <p style="font-size: 12px; color: #aaa;">El clásico ágil y veloz.</p>
+                <button id="btnCompraGolf" class="btn-principal" style="font-size: 16px; padding: 10px 20px;" onclick="comprarGolf()">80$</button>
+            </div>
+            
+            <div class="item-tienda">
+                <h3 style="color: #fff; margin: 5px;">DELORRIAN</h3>
+                <img src="Delorrian.png" width="120" style="margin: 10px;">
+                <p style="font-size: 12px; color: #aaa;">Viaja hacia el futuro.</p>
+                <button id="btnCompraDelorrian" class="btn-principal" style="font-size: 16px; padding: 10px 20px;" onclick="comprarDelorrian()">150$</button>
+            </div>
+
+            <div class="item-tienda">
+                <h3 style="color: #fff; margin: 5px;">AYYINIC</h3>
+                <img src="Ayyinic.png" width="120" style="margin: 10px;">
+                <p style="font-size: 12px; color: #aaa;">Velocidad alienígena pura.</p>
+                <button id="btnCompraAyyinic" class="btn-principal" style="font-size: 16px; padding: 10px 20px;" onclick="comprarAyyinic()">200$</button>
+            </div>
+        </div>
+        <button class="btn-principal" style="background: #555; box-shadow: 0 5px 0 #333; font-size: 16px;" onclick="cerrarPantallaTienda()">VOLVER</button>
+    </div>
+
+    <div id="menuPausa" class="ui-overlay">
+        <h2 style="font-size: 50px; color: #fff; margin-bottom: 30px; text-shadow: 2px 2px 0 #000;">JUEGO PAUSADO</h2>
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <button class="btn-principal" style="background: #2ecc71; box-shadow: 0 5px 0 #27ae60;" onclick="reanudarJuego()">Seguir Partida</button>
+            <button class="btn-principal" style="background: #555; box-shadow: 0 5px 0 #333;" onclick="salirAlMenuDesdePausa()">Salir al menú</button>
+        </div>
+    </div>
+
+    <div id="pantallaPase" class="ui-overlay">
+        <h2 style="font-size: 36px; color: #f1c40f; margin: 0;">PROGRESO DEL PASE</h2>
+        
+        <div id="toggleAutoContainer" onclick="toggleAutoClaim()">
+            <span>RECLAMAR AUTOMÁTICAMENTE</span>
+            <label class="switch">
+                <input type="checkbox" id="checkAutoClaim">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <p id="infoPremiumStatus" style="font-size: 14px; color: #aaa;"></p>
+        <div id="contenedorNiveles"></div>
+
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+            <button id="btnComprarPremium" class="btn-principal" style="background: #f1c40f; color: #000; box-shadow: 0 5px 0 #d35400; font-size: 16px;" onclick="comprarPremium()">MEJORAR A PREMIUM (1000$)</button>
+            <button id="btnComprar5" class="btn-principal" style="background: #3498db; box-shadow: 0 5px 0 #2980b9; font-size: 16px;" onclick="comprarNiveles(5)">+5 NIVELES (<span id="txtCoste5">250</span>$)</button>
+            <button id="btnComprar12" class="btn-principal" style="background: #9b59b6; box-shadow: 0 5px 0 #8e44ad; font-size: 16px;" onclick="comprarNiveles(12)">+12 NIVELES (<span id="txtCoste12">500</span>$)</button>
+            <button class="btn-principal" style="background: #555; box-shadow: 0 5px 0 #333; font-size: 16px;" onclick="cerrarPantallaPase()">VOLVER</button>
+        </div>
+    </div>
+
+    <div id="menuCarreteras" class="ui-overlay">
+        <h2 style="font-size: 40px; color: #fff; margin-bottom: 30px;">SELECCIONA CARRETERA</h2>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+            <div class="road-option" onclick="resetJuego('clasico')">
+                <div style="font-size: 20px; color: #e74c3c; margin-bottom: 5px;">CLÁSICO</div>
+                <div style="font-size: 12px; color: #aaa;">Evita agujeros y llantas.</div>
+            </div>
+            <div class="road-option" onclick="resetJuego('autopista')">
+                <div style="font-size: 20px; color: #00d4ff; margin-bottom: 5px;">AUTOPISTA BOT</div>
+                <div style="font-size: 12px; color: #aaa;">Tráfico inteligente.</div>
+            </div>
+            <div class="road-option" style="border-color: #a020f0;" onclick="resetJuego('neon')">
+                <div style="font-size: 20px; color: #39ff14; margin-bottom: 5px;">NEON NIGHT</div>
+                <div style="font-size: 12px; color: #ea00ff;">Retro-futurismo y enemigos.</div>
+            </div>
+            <div class="road-option" style="border-color: #fff;" onclick="resetJuego('extreme')">
+                <div style="font-size: 20px; color: #fff; margin-bottom: 5px;">EXTREMO</div>
+                <div style="font-size: 12px; color: #aaa;">Cámara dinámica y Todo junto.</div>
+            </div>
+        </div>
+        <button class="btn-principal" style="margin-top: 40px; font-size: 18px; background: #555; box-shadow: 0 5px 0 #333;" onclick="volverAlInicioDesdeCarreteras()">VOLVER</button>
+    </div>
+
+    <div id="menuGarage" class="ui-overlay">
+        <h2 style="color:#00d4ff;">GARAJE Y DESAFÍOS</h2>
+        <div class="garage-grid">
+            <div class="car-option selected" id="optMarting" onclick="equipar('Marting')">
+                <img src="Marting.png" width="80"><br>MARTING
+            </div>
+            <div class="car-option locked" id="optGolf" onclick="equipar('Golf')">
+                <img src="Golfitg.png" width="80"><br>GOLF ITG
+                <div id="priceGolf" style="color:#2ecc71; font-size:10px;">TIENDA</div>
+            </div>
+            <div class="car-option locked" id="optDelorrian" onclick="equipar('Delorrian')">
+                <img src="Delorrian.png" width="80"><br>DELORRIAN
+                <div id="priceTag" style="color:#2ecc71; font-size:10px;">TIENDA</div>
+            </div>
+            <div class="car-option locked" id="optAyyinic" onclick="equipar('Ayyinic')">
+                <img src="Ayyinic.png" width="80"><br>AYYINIC
+                <div id="priceAyyinic" style="color:#2ecc71; font-size:10px;">TIENDA</div>
+            </div>
+            <div class="car-option locked" id="optTiwan" onclick="equipar('Tiwan')">
+                <img src="TiwanITD.png" width="80"><br>TIWAN ITD
+                <div id="priceTiwan" style="color:#f1c40f; font-size:10px;">MISIÓN TIWAN</div>
+            </div>
+            <div class="car-option locked" id="optCharger" style="display:none;" onclick="equipar('Charger')">
+                <img id="imgChargerGarage" src="Charger-Rojo.png" width="80"><br>NEON CHARGER
+                <div id="priceCharger" style="color:#2ecc71; font-size:10px;">DESBLOQUEADO</div>
+            </div>
+            <div class="car-option locked" id="optLambo" style="display:none;" onclick="equipar('Lambortini')">
+                <img src="Lambortini.png" width="80"><br>LAMBORTINI
+                <div style="color:#2ecc71; font-size:10px;">PREMIUM NIV. 50</div>
+            </div>
+        </div>
+        <button class="btn-principal" style="font-size: 16px; margin-top: 15px;" onclick="cerrarGarage()">VOLVER</button>
+    </div>
+
+    <div id="uiGameOver" class="ui-overlay">
+        <div id="globoGameOver">
+            <h2 id="goMsg" style="margin:0; font-size: 28px;">¡BOOM!</h2>
+            <p style="font-size: 20px; margin: 10px 0;"><b>Puntos:</b> <span id="goScore">0</span> | <b>Coins:</b> <span id="goCoins">0</span></p>
+            <div id="goMisiones" style="font-size: 12px; text-align: left; background: #eee; padding: 10px; border-radius: 10px; max-height: 120px; overflow-y: auto;"></div>
+            <button class="btn-principal" style="margin-top: 15px;" onclick="irAlInicio()">REINTENTAR</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById("juegoCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const imgMarting = new Image(); imgMarting.src = 'Marting.png';
+    const imgGolf = new Image(); imgGolf.src = 'Golfitg.png';
+    const imgDelo = new Image(); imgDelo.src = 'Delorrian.png';
+    const imgDeloTurbo = new Image(); imgDeloTurbo.src = 'Delorrian-2.png';
+    const imgLambo = new Image(); imgLambo.src = 'Lambortini.png';
+    const imgAyyinic = new Image(); imgAyyinic.src = 'Ayyinic.png';
+    const imgTiwan = new Image(); imgTiwan.src = 'TiwanITD.png'; // NUEVO COCHE
+    const imgRuedaFuego = new Image(); imgRuedaFuego.src = 'ruedafuego.png';
+    const imgAgujeroConos = new Image(); imgAgujeroConos.src = 'AgujeroConos.png';
+    const imgBot1 = new Image(); imgBot1.src = 'Bot1.png';
+    const imgBot2 = new Image(); imgBot2.src = 'Bot2.png';
+
+    const neonSkins = ['Charger-Rojo.png', 'Charger-Naranja.png', 'Charger-Amarillo.png', 'Charger-Azul.png', 'Charger-Morado.png'];
+    const neonImages = neonSkins.map(src => { const img = new Image(); img.src = src; return img; });
+    let neonIndex = 0;
+    
+    setInterval(() => {
+        neonIndex = (neonIndex + 1) % neonImages.length;
+        const imgGarage = document.getElementById('imgChargerGarage');
+        if(imgGarage) imgGarage.src = neonSkins[neonIndex];
+    }, 2000);
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let sfxVol = 0.6;
+    function playSound(freq, type, duration, vol, sweep = 0) {
+        if (audioCtx.state === 'suspended') return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        if (sweep !== 0) osc.frequency.exponentialRampToValueAtTime(freq + sweep, audioCtx.currentTime + duration);
+        gain.gain.setValueAtTime(vol * sfxVol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
+    }
+
+    let paseData = { 
+        premium: false, 
+        nivel: 1, 
+        xpActual: 0, 
+        xpPorNivel: 200, 
+        maxNivel: 50, 
+        autoClaim: false, 
+        reclamadosBasico: [], 
+        reclamadosPremium: [] 
+    };
+
+    // Funciones Tienda
+    function abrirPantallaTienda() { document.getElementById('menuInicio').style.display = 'none'; document.getElementById('pantallaTienda').style.display = 'flex'; actualizarTiendaUI(); }
+    function cerrarPantallaTienda() { document.getElementById('pantallaTienda').style.display = 'none'; document.getElementById('menuInicio').style.display = 'flex'; }
+    
+    // Funciones Misiones
+    function abrirMisiones() { document.getElementById('menuInicio').style.display = 'none'; document.getElementById('menuMisiones').style.display = 'flex'; actualizarMisionesUI(); }
+    function cerrarMisiones() { document.getElementById('menuMisiones').style.display = 'none'; document.getElementById('menuInicio').style.display = 'flex'; }
+
+    let ayyinicComprado = false;
+    
+    function comprarGolf() {
+        if (golfComprado) return;
+        if (totalCoins >= 80) { 
+            totalCoins -= 80; 
+            golfComprado = true; 
+            document.getElementById('optGolf').classList.remove('locked'); 
+            document.getElementById('priceGolf').innerText = 'DESBLOQUEADO';
+            playSound(600, 'sine', 0.5, 0.3, 200); 
+            actualizarTiendaUI();
+            actualizarMisionesUI();
+        } else alert("No tienes suficientes DashCoins.");
+    }
+
+    function comprarDelorrian() {
+        if (delorrianComprado) return;
+        if (totalCoins >= 150) { 
+            totalCoins -= 150; 
+            delorrianComprado = true; 
+            document.getElementById('optDelorrian').classList.remove('locked'); 
+            document.getElementById('priceTag').innerText = 'DESBLOQUEADO';
+            playSound(600, 'sine', 0.5, 0.3, 200); 
+            actualizarTiendaUI();
+            actualizarMisionesUI();
+        } else alert("No tienes suficientes DashCoins.");
+    }
+
+    function comprarAyyinic() {
+        if (ayyinicComprado) return;
+        if (totalCoins >= 200) { 
+            totalCoins -= 200;
+            ayyinicComprado = true;
+            document.getElementById('optAyyinic').classList.remove('locked');
+            document.getElementById('priceAyyinic').innerText = 'DESBLOQUEADO';
+            playSound(900, 'sine', 0.6, 0.4, 300);
+            actualizarTiendaUI();
+            actualizarMisionesUI();
+        } else alert("No tienes suficientes DashCoins.");
+    }
+
+    function actualizarTiendaUI() {
+        const btnA = document.getElementById('btnCompraAyyinic');
+        if(ayyinicComprado && btnA) { btnA.innerText = "COMPRADO"; btnA.style.background = "#2ecc71"; btnA.disabled = true; }
+        
+        const btnG = document.getElementById('btnCompraGolf');
+        if(golfComprado && btnG) { btnG.innerText = "COMPRADO"; btnG.style.background = "#2ecc71"; btnG.disabled = true; }
+        
+        const btnD = document.getElementById('btnCompraDelorrian');
+        if(delorrianComprado && btnD) { btnD.innerText = "COMPRADO"; btnD.style.background = "#2ecc71"; btnD.disabled = true; }
+    }
+
+    function toggleAutoClaim() {
+        paseData.autoClaim = !paseData.autoClaim;
+        document.getElementById('checkAutoClaim').checked = paseData.autoClaim;
+        if (paseData.autoClaim) reclamarTodoPendiente();
+    }
+
+    function reclamarTodoPendiente() {
+        let cobradoAlgo = false;
+        for (let i = 1; i <= paseData.nivel; i++) {
+            if (!paseData.reclamadosBasico.includes(i)) {
+                totalCoins += 20; paseData.reclamadosBasico.push(i); cobradoAlgo = true;
+            }
+            if (paseData.premium && !paseData.reclamadosPremium.includes(i)) {
+                totalCoins += 30; paseData.reclamadosPremium.push(i); cobradoAlgo = true;
+            }
+        }
+        if (cobradoAlgo) {
+            playSound(1200, 'sine', 0.3, 0.4);
+            actualizarMisionesUI(); generarListaPase();
+        }
+    }
+
+    function abrirPantallaPase() {
+        document.getElementById('menuInicio').style.display = 'none';
+        document.getElementById('pantallaPase').style.display = 'flex';
+        document.getElementById('checkAutoClaim').checked = paseData.autoClaim;
+        generarListaPase();
+    }
+
+    function cerrarPantallaPase() { document.getElementById('pantallaPase').style.display = 'none'; document.getElementById('menuInicio').style.display = 'flex'; }
+
+    function generarListaPase() {
+        const contenedor = document.getElementById('contenedorNiveles');
+        contenedor.innerHTML = '';
+        for (let i = 1; i <= paseData.maxNivel; i++) {
+            const div = document.createElement('div');
+            div.className = 'fila-nivel';
+            if (i > paseData.nivel) div.classList.add('bloqueado');
+            if (i === paseData.nivel) div.classList.add('actual');
+
+            let cobradoBas = paseData.reclamadosBasico.includes(i);
+            let cobradoPre = paseData.reclamadosPremium.includes(i);
+
+            let premiumItem = "30 DC";
+            if (i === 25) premiumItem = "NEON CHARGER";
+            if (i === 50) premiumItem = "LAMBORTINI";
+
+            div.innerHTML = `<div class="num-nivel">${i}</div><div class="recompensa-box"><div class="item-recompensa basico">${cobradoBas ? '✓' : '⚪'} 20 DC</div><div class="item-recompensa premium">${cobradoPre ? '✓' : '🟡'} ${premiumItem}</div></div>`;
+            
+            div.onclick = () => {
+                if (i > paseData.nivel) return;
+                let cobradoLocal = false;
+                if (!paseData.reclamadosBasico.includes(i)) {
+                    totalCoins += 20; paseData.reclamadosBasico.push(i); cobradoLocal = true;
+                }
+                if (paseData.premium && !paseData.reclamadosPremium.includes(i)) {
+                    totalCoins += 30; paseData.reclamadosPremium.push(i); cobradoLocal = true;
+                }
+                if (cobradoLocal) {
+                    playSound(1000, 'sine', 0.2, 0.3); actualizarMisionesUI(); generarListaPase();
+                }
+            };
+            contenedor.appendChild(div);
+        }
+        document.getElementById('imgBtnPase').src = paseData.premium ? 'PasePremium.png' : 'PaseBásico.png';
+        document.getElementById('tagNivelInicio').innerText = paseData.nivel;
+        document.getElementById('btnComprarPremium').style.display = paseData.premium ? 'none' : 'block';
+        
+        document.getElementById('txtCoste5').innerText = paseData.premium ? "270" : "250";
+        document.getElementById('txtCoste12').innerText = paseData.premium ? "550" : "500";
+        
+        if(paseData.reclamadosPremium.includes(25)) {
+            chargerDesbloqueado = true;
+            const optC = document.getElementById('optCharger');
+            if(optC){ optC.style.display = 'block'; optC.classList.remove('locked'); }
+        }
+        if(paseData.reclamadosPremium.includes(50)) {
+            lamboDesbloqueado = true;
+            const optL = document.getElementById('optLambo');
+            if(optL){ optL.style.display = 'block'; optL.classList.remove('locked'); }
+        }
+    }
+
+    function comprarNiveles(niveles) {
+        let coste = 0;
+        if (niveles === 5) coste = paseData.premium ? 270 : 250;
+        else if (niveles === 12) coste = paseData.premium ? 550 : 500;
+
+        if (totalCoins >= coste) {
+            if (paseData.nivel >= paseData.maxNivel) {
+                alert("¡Ya estás en el nivel máximo!");
+                return;
+            }
+            totalCoins -= coste;
+            paseData.nivel = Math.min(paseData.nivel + niveles, paseData.maxNivel);
+            paseData.xpActual = 0; 
+            if (paseData.autoClaim) reclamarTodoPendiente();
+            playSound(1000, 'sine', 0.5, 0.4, 300);
+            generarListaPase();
+            actualizarMisionesUI();
+        } else alert("No tienes suficientes DashCoins.");
+    }
+
+    function sumarXP(cantidad) {
+        if (paseData.nivel >= paseData.maxNivel) return;
+        paseData.xpActual += cantidad;
+        while (paseData.xpActual >= paseData.xpPorNivel && paseData.nivel < paseData.maxNivel) {
+            paseData.xpActual -= paseData.xpPorNivel;
+            paseData.nivel++;
+            if (paseData.autoClaim) reclamarTodoPendiente();
+            playSound(1000, 'sine', 0.4, 0.3, 200);
+        }
+        document.getElementById('tagNivelInicio').innerText = paseData.nivel;
+    }
+
+    function comprarPremium() {
+        if (totalCoins >= 1000) {
+            totalCoins -= 1000; paseData.premium = true;
+            if (paseData.autoClaim) reclamarTodoPendiente();
+            playSound(800, 'square', 0.5, 0.4); generarListaPase(); actualizarMisionesUI();
+        } else alert("Necesitas 1000 DashCoins.");
+    }
+
+    let estadoActual = 'inicio', modoCarretera = 'clasico', score = 0, totalCoins = 0, coinsRonda = 0, nearMissesRonda = 0;
+    let offsetCarretera = 0, teclas = {}, shake = 0, carFuegoFrec = 0;
+    let cocheSeleccionado = 'Marting', delorrianComprado = false, golfComprado = false, chargerDesbloqueado = false, lamboDesbloqueado = false;
+    
+    // SISTEMA PARA DESBLOQUEAR A TIWAN
+    let tiwanDesbloqueado = false;
+    let modosJugados = { clasico: false, autopista: false, neon: false, extreme: false };
+    
+    let car = { x: 400, y: 420, w: 150, h: 150, rotVisual: 0, causaMuerte: '', velMuerteX: 0, objetivoX: 0, objetivoY: 0 };
+    let obstaculos = [], efectos = [];
+
+    let neonEnemy = { active: false, x: 0, y: -200, timer: 0, attackTimer: 0, nextSpawn: 20000 };
+    let neonProjectiles = [];
+
+    let misiones = [
+        { id: 1, txt: "Paseo rápido: 10 Puntos", meta: 10, tipo: 'score', recomp: 10, done: false },
+        { id: 2, txt: "Susto: 2 Near Miss", meta: 2, tipo: 'miss', recomp: 15, done: false },
+        { id: 3, txt: "Principiante: 30 Puntos", meta: 30, tipo: 'score', recomp: 25, done: false },
+        { id: 4, txt: "Casi: 5 Near Miss", meta: 5, tipo: 'miss', recomp: 40, done: false },
+        { id: 5, txt: "Conductor: 100 Puntos", meta: 100, tipo: 'score', recomp: 60, done: false },
+        { id: 6, txt: "Avanzado: 250 Puntos", meta: 250, tipo: 'score', recomp: 120, done: false },
+        { id: 7, txt: "Reflejos: 10 Near Miss", meta: 10, tipo: 'miss', recomp: 100, done: false },
+        { id: 12, txt: "Veloz: 500 Puntos", meta: 500, tipo: 'score', recomp: 250, done: false },
+        { id: 13, txt: "Ninja: 20 Near Miss", meta: 20, tipo: 'miss', recomp: 200, done: false },
+        { id: 14, txt: "Experto: 800 Puntos", meta: 800, tipo: 'score', recomp: 400, done: false },
+        { id: 15, txt: "Inalcanzable: 30 Near Miss", meta: 30, tipo: 'miss', recomp: 350, done: false },
+        { id: 16, txt: "Pro: 1200 Puntos", meta: 1200, tipo: 'score', recomp: 600, done: false },
+        { id: 17, txt: "Sombra: 40 Near Miss", meta: 40, tipo: 'miss', recomp: 500, done: false },
+        { id: 18, txt: "Maestro: 2000 Puntos", meta: 2000, tipo: 'score', recomp: 800, done: false },
+        { id: 19, txt: "Intocable: 50 Near Miss", meta: 50, tipo: 'miss', recomp: 700, done: false },
+        { id: 20, txt: "Leyenda: 3000 Puntos", meta: 3000, tipo: 'score', recomp: 1200, done: false },
+        { id: 21, txt: "Dios: 75 Near Miss", meta: 75, tipo: 'miss', recomp: 1500, done: false },
+        { id: 22, txt: "TIWAN: Juega los 4 modos de juego", meta: 999999, tipo: 'tiwan', recomp: 500, done: false } // NUEVA MISIÓN
+    ];
+
+    window.addEventListener("keydown", (e) => {
+        teclas[e.key] = true;
+        if ((e.key.toLowerCase() === 'p') && (estadoActual === 'jugando' || estadoActual === 'pausado')) {
+            togglePausa();
+        }
+    });
+    window.addEventListener("keyup", (e) => teclas[e.key] = false);
+
+    function togglePausa() {
+        if (estadoActual === 'jugando') {
+            pausarJuego();
+        } else if (estadoActual === 'pausado') {
+            reanudarJuego();
+        }
+    }
+
+    function pausarJuego() {
+        estadoActual = 'pausado';
+        document.getElementById('menuPausa').style.display = 'flex';
+        document.getElementById('btnPausa').style.display = 'none';
+    }
+
+    function reanudarJuego() {
+        estadoActual = 'jugando';
+        document.getElementById('menuPausa').style.display = 'none';
+        document.getElementById('btnPausa').style.display = 'block';
+    }
+
+    function salirAlMenuDesdePausa() {
+        estadoActual = 'inicio';
+        document.getElementById('menuPausa').style.display = 'none';
+        document.getElementById('menuInicio').style.display = 'flex';
+        document.getElementById('btnPausa').style.display = 'none';
+        actualizarMisionesUI();
+    }
+
+    function irAlInicio() { 
+        estadoActual = 'inicio';
+        document.getElementById('uiGameOver').style.display = "none";
+        document.getElementById('menuInicio').style.display = "flex";
+        document.getElementById('btnPausa').style.display = "none";
+        actualizarMisionesUI();
+    }
+
+    function abrirCarreteras() { document.getElementById('menuInicio').style.display = 'none'; document.getElementById('menuCarreteras').style.display = 'flex'; }
+    function volverAlInicioDesdeCarreteras() { document.getElementById('menuCarreteras').style.display = 'none'; document.getElementById('menuInicio').style.display = 'flex'; }
+
+    function resetJuego(modo) {
+        modoCarretera = modo; audioCtx.resume();
+        
+        // CHECK MISIÓN TIWAN
+        modosJugados[modo] = true;
+        let jugados = Object.values(modosJugados).filter(Boolean).length;
+        let misionTiwan = misiones.find(m => m.id === 22);
+        if (misionTiwan && !misionTiwan.done && jugados >= 4) {
+            misionTiwan.done = true;
+            tiwanDesbloqueado = true;
+            totalCoins += misionTiwan.recomp;
+            let optT = document.getElementById('optTiwan');
+            if (optT) {
+                optT.classList.remove('locked');
+                document.getElementById('priceTiwan').innerText = 'DESBLOQUEADO';
+                document.getElementById('priceTiwan').style.color = '#2ecc71';
+            }
+            playSound(800, 'sine', 0.5, 0.3, 200);
+            actualizarMisionesUI();
+        }
+        
+        score = 0; coinsRonda = 0; nearMissesRonda = 0; obstaculos = []; efectos = []; neonProjectiles = [];
+        neonEnemy = { active: false, x: 400, y: -200, timer: Date.now() + 20000, attackTimer: 0 };
+        car.x = 400; car.y = 420; car.w = 150; car.h = 150; car.rotVisual = 0; car.causaMuerte = '';
+        estadoActual = 'jugando';
+        document.getElementById('menuCarreteras').style.display = 'none';
+        document.getElementById('menuInicio').style.display = 'none';
+        document.getElementById('btnPausa').style.display = 'block';
+        playSound(200, 'square', 0.2, 0.3, 400);
+    }
+
+    function abrirGarage() { document.getElementById('menuGarage').style.display = 'flex'; actualizarMisionesUI(); }
+    function cerrarGarage() { document.getElementById('menuGarage').style.display = 'none'; }
+
+    function equipar(c) {
+        if ((c === 'Delorrian' && !delorrianComprado) || (c === 'Golf' && !golfComprado) || (c === 'Charger' && !chargerDesbloqueado) || (c === 'Lambortini' && !lamboDesbloqueado) || (c === 'Ayyinic' && !ayyinicComprado) || (c === 'Tiwan' && !tiwanDesbloqueado)) return;
+        cocheSeleccionado = c;
+        const imgMap = { 'Marting': 'Marting.png', 'Golf': 'Golfitg.png', 'Delorrian': 'Delorrian.png', 'Charger': neonSkins[neonIndex], 'Lambortini': 'Lambortini.png', 'Ayyinic': 'Ayyinic.png', 'Tiwan': 'TiwanITD.png' };
+        document.getElementById('imgMenuShow').src = imgMap[c];
+        document.getElementById('optMarting').classList.toggle('selected', c==='Marting');
+        document.getElementById('optGolf').classList.toggle('selected', c==='Golf');
+        document.getElementById('optDelorrian').classList.toggle('selected', c==='Delorrian');
+        document.getElementById('optCharger').classList.toggle('selected', c==='Charger');
+        document.getElementById('optLambo').classList.toggle('selected', c==='Lambortini');
+        document.getElementById('optAyyinic').classList.toggle('selected', c==='Ayyinic');
+        document.getElementById('optTiwan').classList.toggle('selected', c==='Tiwan');
+    }
+
+    function actualizarMisionesUI() {
+        const html = misiones.map(m => `<div class="mission-item ${m.done?'mission-done':''}"> ${m.done?'✓':'○'} ${m.txt} (+${m.recomp}$)</div>`).join('');
+        document.getElementById('miniMisiones').innerHTML = "MISIONES: " + misiones.filter(m=>!m.done).length;
+        document.getElementById('listaMisionesFull').innerHTML = html;
+        document.getElementById('valCoins').innerText = totalCoins;
+        document.getElementById('valCoinsInicio').innerText = totalCoins;
+    }
+
+    function dibujarTurboMarting() {
+        carFuegoFrec += 0.5; let flama = Math.sin(carFuegoFrec) * 15;
+        ctx.fillStyle = "#ff3300"; ctx.beginPath(); ctx.moveTo(car.x+car.w*0.36, car.y+car.h*0.86); ctx.lineTo(car.x+car.w*0.5, car.y+car.h*1.2+flama); ctx.lineTo(car.x+car.w*0.63, car.y+car.h*0.86); ctx.fill();
+        ctx.fillStyle = "#ffcc00"; ctx.beginPath(); ctx.moveTo(car.x+car.w*0.43, car.y+car.h*0.86); ctx.lineTo(car.x+car.w*0.5, car.y+car.h*1.1+flama/2); ctx.lineTo(car.x+car.w*0.56, car.y+car.h*0.86); ctx.fill();
+    }
+
+    function dibujarTurboGolf() {
+        if (teclas["ArrowUp"]) {
+            ctx.fillStyle = "rgba(0, 212, 255, 0.4)";
+            for(let i=0; i<3; i++){ ctx.beginPath(); ctx.arc(car.x + car.w*0.26 + Math.random()*car.w*0.46, car.y + car.h*0.9 + Math.random()*20, 5 + Math.random()*10, 0, Math.PI*2); ctx.fill(); }
+        }
+    }
+
+    function dibujarEfectosDelorrian() {
+        if (teclas["ArrowUp"]) {
+            ctx.strokeStyle = "#00d4ff"; ctx.lineWidth = 3;
+            for(let i=0; i<5; i++) { ctx.beginPath(); ctx.moveTo(car.x + Math.random()*car.w, car.y + Math.random()*car.h); ctx.lineTo(car.x + Math.random()*car.w, car.y + Math.random()*car.h); ctx.stroke(); }
+        }
+    }
+
+    function spawn() {
+        let spawnRate = (modoCarretera === 'clasico' ? 0.04 : 0.03);
+        if (modoCarretera === 'neon') spawnRate = 0.05;
+        if (modoCarretera === 'extreme') spawnRate = 0.045; 
+
+        if (Math.random() < spawnRate) {
+            if (modoCarretera === 'clasico') {
+                const tipos = ['agujero', 'llanta']; const t = tipos[Math.floor(Math.random()*tipos.length)];
+                obstaculos.push({ x: Math.random()*700 + 125, y: -150, tipo: t, speed: 5 + (score * 0.1), missed: false, w: 100, h: 100 });
+            } else if (modoCarretera === 'autopista') {
+                const lane = Math.floor(Math.random() * 8) + 1;
+                let canSpawn = true;
+                obstaculos.forEach(obs => { if (obs.tipo.startsWith('bot') && obs.targetLane === lane && obs.y < 50) canSpawn = false; });
+                if (canSpawn) {
+                    let spd = 3 + Math.random() * 4 + (score * 0.05);
+                    obstaculos.push({ x: lane * 95, y: -150, tipo: (Math.random() > 0.5 ? 'bot1' : 'bot2'), speed: spd, baseSpeed: spd, missed: false, w: 150, h: 150, targetX: lane * 95, lane: lane, targetLane: lane, turnSignal: null, turnTimer: 0 });
+                }
+            } else if (modoCarretera === 'neon') {
+                const t = Math.random() > 0.5 ? 'cube' : 'pyramid';
+                obstaculos.push({ x: Math.random()*700 + 125, y: -150, tipo: t, speed: 6 + (score * 0.1), missed: false, w: 80, h: 80 });
+            } else if (modoCarretera === 'extreme') {
+                let spawnY = car.y - 900; 
+
+                if (Math.random() < 0.5) {
+                    const tipos = ['agujero', 'llanta']; const t = tipos[Math.floor(Math.random()*tipos.length)];
+                    obstaculos.push({ x: Math.random()*700 + 125, y: spawnY, tipo: t, speed: 6 + (score * 0.1), missed: false, w: 100, h: 100 });
+                } else {
+                    const lane = Math.floor(Math.random() * 8) + 1;
+                    let canSpawn = true;
+                    obstaculos.forEach(obs => { if (obs.tipo.startsWith('bot') && obs.targetLane === lane && Math.abs(obs.y - spawnY) < 200) canSpawn = false; });
+                    if (canSpawn) {
+                        let spd = 4 + Math.random() * 4 + (score * 0.05);
+                        obstaculos.push({ x: lane * 95, y: spawnY, tipo: (Math.random() > 0.5 ? 'bot1' : 'bot2'), speed: spd, baseSpeed: spd, missed: false, w: 150, h: 150, targetX: lane * 95, lane: lane, targetLane: lane, turnSignal: null, turnTimer: 0 });
+                    }
+                }
+            }
+        }
+    }
+
+    function actualizar() {
+        if (estadoActual === 'inicio' || estadoActual === 'pausado') return;
+        
+        if (estadoActual === 'muerto') {
+            if (car.causaMuerte === 'agujero') { if (car.w > 0) { car.w -= 2.5; car.h -= 2.5; car.x += (car.objetivoX - (car.x + car.w/2)) * 0.1; car.y += (car.objetivoY - (car.y + car.h/2)) * 0.1; } }
+            else { car.y += 10; car.x += car.velMuerteX; car.rotVisual += 0.3; }
+            return;
+        }
+        
+        offsetCarretera += 10 + (score * 0.05);
+        if (teclas["ArrowLeft"] && car.x > 50) { car.x -= 8; car.rotVisual = -0.15; }
+        else if (teclas["ArrowRight"] && car.x < 750) { car.x += 8; car.rotVisual = 0.15; }
+        else car.rotVisual *= 0.9;
+        if (teclas["ArrowUp"] && car.y > 50) car.y -= 6;
+        if (teclas["ArrowDown"] && car.y < 450) car.y += 6;
+
+        spawn();
+
+        if (modoCarretera === 'neon') {
+            if (!neonEnemy.active && Date.now() > neonEnemy.timer) {
+                neonEnemy.active = true;
+                neonEnemy.x = Math.random() * 700 + 100;
+                neonEnemy.y = -100;
+                neonEnemy.attackTimer = Date.now() + 10000;
+                playSound(400, 'square', 0.5, 0.2, 200);
+            }
+            if (neonEnemy.active) {
+                if (neonEnemy.y < 80) neonEnemy.y += 2;
+                if (Math.random() < 0.05) {
+                    neonProjectiles.push({ x: neonEnemy.x + 40, y: neonEnemy.y + 80, speed: 8 });
+                    playSound(1200, 'sine', 0.1, 0.1);
+                }
+                if (Date.now() > neonEnemy.attackTimer) {
+                    neonEnemy.y -= 5;
+                    if (neonEnemy.y < -200) {
+                        neonEnemy.active = false;
+                        neonEnemy.timer = Date.now() + 20000;
+                    }
+                }
+            }
+            neonProjectiles.forEach((p, idx) => {
+                p.y += p.speed;
+                if (Math.hypot((car.x+car.w/2)-p.x, (car.y+car.h/2)-p.y) < 40) {
+                    estadoActual = 'muerto'; car.causaMuerte = 'rayo';
+                    document.getElementById('btnPausa').style.display = 'none';
+                    setTimeout(() => { document.getElementById('goMsg').innerText = "¡DERRETIDO POR EL NEÓN!"; document.getElementById('uiGameOver').style.display = 'flex'; }, 1000);
+                }
+                if (p.y > 600) neonProjectiles.splice(idx, 1);
+            });
+        }
+
+        let bots = obstaculos.filter(o => o.tipo.startsWith('bot'));
+        bots.forEach(bot => {
+            if (bot.lane === bot.targetLane) {
+                let botAhead = bots.find(b => b !== bot && b.targetLane === bot.lane && b.y > bot.y && b.y - bot.y < 250);
+                if (botAhead) {
+                    if (bot.baseSpeed > botAhead.speed || botAhead.speed < bot.speed) {
+                        let canGoLeft = bot.lane > 1;
+                        let canGoRight = bot.lane < 8;
+                        
+                        if (canGoLeft) {
+                            let blockingLeft = bots.some(b => b.targetLane === bot.lane - 1 && Math.abs(b.y - bot.y) < 250);
+                            if (blockingLeft) canGoLeft = false;
+                        }
+                        if (canGoRight) {
+                            let blockingRight = bots.some(b => b.targetLane === bot.lane + 1 && Math.abs(b.y - bot.y) < 250);
+                            if (blockingRight) canGoRight = false;
+                        }
+
+                        if (canGoLeft) {
+                            bot.targetLane = bot.lane - 1;
+                            bot.turnSignal = 'left';
+                        } else if (canGoRight) {
+                            bot.targetLane = bot.lane + 1;
+                            bot.turnSignal = 'right';
+                        } else {
+                            if (botAhead.y - bot.y < 180) {
+                                bot.speed = botAhead.speed;
+                            }
+                        }
+                    }
+                } else {
+                    if (bot.speed < bot.baseSpeed) bot.speed += 0.05;
+                }
+            }
+
+            if (bot.lane !== bot.targetLane) {
+                let targetX = bot.targetLane * 95;
+                if (Math.abs(bot.x - targetX) > 3) {
+                    bot.x += (targetX > bot.x) ? 3 : -3;
+                } else {
+                    bot.x = targetX;
+                    bot.lane = bot.targetLane;
+                    bot.turnSignal = null;
+                }
+            }
+        });
+
+        for (let i = obstaculos.length-1; i>=0; i--) {
+            let o = obstaculos[i]; o.y += o.speed;
+            let ox = o.tipo.startsWith('bot') ? o.x + 75 : o.x;
+            let oy = o.tipo.startsWith('bot') ? o.y + 75 : o.y;
+            let dist = Math.hypot((car.x+car.w/2)-ox, (car.y+car.h/2)-oy);
+            let radio = o.tipo.startsWith('bot') ? 60 : 45;
+
+            if (dist < radio) {
+                shake = 30; estadoActual = 'muerto'; car.causaMuerte = o.tipo; car.velMuerteX = (car.x + car.w/2 - ox) * 0.5; car.objetivoX = ox; car.objetivoY = oy;
+                document.getElementById('btnPausa').style.display = 'none';
+                let msg = "¡ACCIDENTE!";
+                if (o.tipo === 'agujero') msg = "¡ME CAIGO! AAAAH!!!";
+                if (o.tipo === 'llanta') msg = "¡PERDISTE, PERO, QUIÉN PUSO ESO AHÍ!";
+                if (o.tipo.startsWith('bot')) msg = "¡CUIDADO CON EL TRÁFICO!";
+                if (o.tipo === 'cube' || o.tipo === 'pyramid') msg = "¡TE DISTE CON EL RETRO-MURO!";
+                
+                setTimeout(() => { 
+                    document.getElementById('goMsg').innerText = msg;
+                    document.getElementById('goScore').innerText = score; 
+                    document.getElementById('goCoins').innerText = coinsRonda; 
+                    document.getElementById('uiGameOver').style.display = 'flex'; 
+                }, 1500);
+                playSound(100, 'sawtooth', 0.5, 0.3, -50);
+            } else if (!o.missed && dist < 130) { 
+                o.missed = true; 
+                let gain = (paseData.premium) ? 10 : 5; 
+                score += gain; nearMissesRonda++; sumarXP(5); 
+                efectos.push({ x: car.x+car.w/2, y: car.y, t: "NEAR MISS! +" + gain, l: 40 }); 
+            }
+            if (o.y > 650) { obstaculos.splice(i,1); score += (paseData.premium) ? 2 : 1; sumarXP(1); }
+        }
+        misiones.forEach(m => { if (!m.done) { let v = (m.tipo === 'score' ? score : nearMissesRonda); if (v >= m.meta) { m.done = true; totalCoins += m.recomp; coinsRonda += m.recomp; playSound(800, 'sine', 0.3, 0.2); } } });
+        efectos.forEach((e, idx) => { e.y -= 2; e.l--; if(e.l<=0) efectos.splice(idx,1); });
+        document.getElementById('valScore').innerText = score; document.getElementById('valCoins').innerText = totalCoins;
+    }
+
+    function dibujar() {
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.fillStyle = (modoCarretera === 'neon') ? "#020005" : "#050505";
+        ctx.fillRect(0,0,950,600);
+        
+        let camY = 0;
+        if (modoCarretera === 'extreme') {
+            camY = car.y - 420; 
+        }
+
+        ctx.save(); 
+        ctx.translate(0, -camY); 
+
+        if (shake > 0) { ctx.translate(Math.random()*shake-shake/2, Math.random()*shake-shake/2); shake *= 0.85; }
+
+        if (modoCarretera === 'neon') {
+            ctx.strokeStyle = "#39ff14"; ctx.lineWidth = 4; ctx.setLineDash([40, 60]); ctx.lineDashOffset = -offsetCarretera;
+            ctx.beginPath(); ctx.moveTo(50, 0); ctx.lineTo(50, 600); ctx.stroke();
+            ctx.strokeStyle = "#ea00ff"; ctx.beginPath(); ctx.moveTo(900, 0); ctx.lineTo(900, 600); ctx.stroke();
+            ctx.setLineDash([]);
+        } else {
+            ctx.strokeStyle = "rgba(231, 76, 60, 0.2)"; ctx.setLineDash([40, 60]); ctx.lineDashOffset = -offsetCarretera;
+            for(let i=1; i<10; i++) { ctx.beginPath(); ctx.moveTo(i*95, -200); ctx.lineTo(i*95, 800); ctx.stroke(); }
+            ctx.setLineDash([]);
+        }
+
+        if (estadoActual !== 'inicio') {
+            obstaculos.forEach(o => {
+                if (o.tipo === 'agujero') ctx.drawImage(imgAgujeroConos, o.x - o.w/2, o.y - o.h/2, o.w, o.h);
+                else if (o.tipo === 'llanta') ctx.drawImage(imgRuedaFuego, o.x - o.w/2, o.y - o.h/2, o.w, o.h);
+                else if (o.tipo === 'cube') {
+                    ctx.fillStyle = "#ea00ff"; ctx.shadowBlur = 15; ctx.shadowColor = "#ea00ff";
+                    ctx.fillRect(o.x - 40, o.y - 40, 80, 80); ctx.shadowBlur = 0;
+                } else if (o.tipo === 'pyramid') {
+                    ctx.fillStyle = "#00ffff"; ctx.shadowBlur = 15; ctx.shadowColor = "#00ffff";
+                    ctx.beginPath(); ctx.moveTo(o.x, o.y-40); ctx.lineTo(o.x-40, o.y+40); ctx.lineTo(o.x+40, o.y+40); ctx.fill(); ctx.shadowBlur = 0;
+                } else { 
+                    ctx.drawImage(o.tipo === 'bot1' ? imgBot1 : imgBot2, o.x, o.y, o.w, o.h); 
+                    if (o.turnSignal) {
+                        o.turnTimer = (o.turnTimer || 0) + 1;
+                        if (o.turnTimer % 20 < 10) {
+                            ctx.fillStyle = "#ffaa00";
+                            ctx.shadowBlur = 10;
+                            ctx.shadowColor = "#ffaa00";
+                            if (o.turnSignal === 'left') {
+                                ctx.fillRect(o.x + 35, o.y + 30, 8, 8); 
+                                ctx.fillRect(o.x + 35, o.y + o.h - 40, 8, 8);
+                            } else if (o.turnSignal === 'right') {
+                                ctx.fillRect(o.x + o.w - 45, o.y + 30, 8, 8); 
+                                ctx.fillRect(o.x + o.w - 45, o.y + o.h - 40, 8, 8);
+                            }
+                            ctx.shadowBlur = 0;
+                        }
+                    }
+                }
+            });
+
+            if (neonEnemy.active) {
+                ctx.fillStyle = "#39ff14"; ctx.shadowBlur = 20; ctx.shadowColor = "#39ff14";
+                ctx.beginPath(); ctx.arc(neonEnemy.x + 40, neonEnemy.y + 40, 40, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(neonEnemy.x + 25, neonEnemy.y + 35, 5, 0, Math.PI*2); ctx.arc(neonEnemy.x + 55, neonEnemy.y + 35, 5, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+            neonProjectiles.forEach(p => { ctx.fillStyle = "#39ff14"; ctx.fillRect(p.x-2, p.y, 4, 20); });
+
+            if (estadoActual !== 'muerto') {
+                if (cocheSeleccionado === 'Marting' && teclas["ArrowUp"]) dibujarTurboMarting();
+                if (cocheSeleccionado === 'Golf') dibujarTurboGolf();
+                if (cocheSeleccionado === 'Delorrian') dibujarEfectosDelorrian();
+            }
+
+            ctx.save(); ctx.translate(car.x+car.w/2, car.y+car.h/2); ctx.rotate(car.rotVisual);
+            let img = imgMarting;
+            if (cocheSeleccionado === 'Golf') img = imgGolf;
+            if (cocheSeleccionado === 'Delorrian') img = (teclas["ArrowUp"] && estadoActual !== 'muerto' ? imgDeloTurbo : imgDelo);
+            if (cocheSeleccionado === 'Charger') img = neonImages[neonIndex];
+            if (cocheSeleccionado === 'Lambortini') img = imgLambo;
+            if (cocheSeleccionado === 'Ayyinic') img = imgAyyinic;
+            if (cocheSeleccionado === 'Tiwan') img = imgTiwan; // COCHE AÑADIDO
+            if (car.w > 0) ctx.drawImage(img, -car.w/2, -car.h/2, car.w, car.h);
+            ctx.restore();
+            
+            efectos.forEach(e => { ctx.fillStyle = "white"; ctx.font = "bold 20px Arial"; ctx.fillText(e.t, e.x, e.y); });
+        }
+        ctx.restore(); 
+        actualizar(); requestAnimationFrame(dibujar);
+    }
+    dibujar(); actualizarMisionesUI();
+</script>
+</body>
+</html>
